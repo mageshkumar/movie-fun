@@ -1,10 +1,12 @@
 spring:
-  jpa:
-    generate-ddl: true
-    properties.hibernate.dialect: org.hibernate.dialect.MySQL5Dialect
-  datasource:
-    url: jdbc:mysql://localhost:3306/movies?useSSL=false
-    username: root
   mvc.view:
     prefix: /WEB-INF/
     suffix: .jsp
+
+spring.datasource.hikari.minimum-idle: 7
+spring.datasource.hikari.pool-name: Test-1
+
+spring.datasource.hikari.data-source-properties.prepStmtCacheSize: 250
+spring.datasource.hikari.data-source-properties.prepStmtCacheSqlLimit: 2048
+spring.datasource.hikari.data-source-properties.cachePrepStmts: true
+spring.datasource.hikari.data-source-properties.useServerPrepStmts: true
