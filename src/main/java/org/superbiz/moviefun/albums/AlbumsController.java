@@ -1,12 +1,16 @@
 package org.superbiz.moviefun.albums;
 
+import com.amazonaws.services.dynamodbv2.xspec.B;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.superbiz.moviefun.blobstore.Blob;
+import org.superbiz.moviefun.blobstore.BlobStore;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -25,9 +29,12 @@ import static java.nio.file.Files.readAllBytes;
 public class AlbumsController {
 
     private final AlbumsBean albumsBean;
+    private BlobStore blobStore;
 
-    public AlbumsController(AlbumsBean albumsBean) {
+    @Autowired
+    public AlbumsController(AlbumsBean albumsBean, BlobStore blobStore) {
         this.albumsBean = albumsBean;
+        this.blobStore = blobStore;
     }
 
 
@@ -61,13 +68,14 @@ public class AlbumsController {
 
 
     private void saveUploadToFile(@RequestParam("file") MultipartFile uploadedFile, File targetFile) throws IOException {
-        targetFile.delete();
-        targetFile.getParentFile().mkdirs();
-        targetFile.createNewFile();
-
-        try (FileOutputStream outputStream = new FileOutputStream(targetFile)) {
-            outputStream.write(uploadedFile.getBytes());
-        }
+//        targetFile.delete();
+//        targetFile.getParentFile().mkdirs();
+//        targetFile.createNewFile();
+//
+//        try (FileOutputStream outputStream = new FileOutputStream(targetFile)) {
+//            outputStream.write(uploadedFile.getBytes());
+//        }
+        blobStore.put(new Blob(targetFile.getName(), uploadedFile.getInputStream(), new Tika().detect(targetFile)));
     }
 
     private HttpHeaders createImageHttpHeaders(Path coverFilePath, byte[] imageBytes) throws IOException {
@@ -79,12 +87,21 @@ public class AlbumsController {
         return headers;
     }
 
-    private File getCoverFile(@PathVariable long albumId) {
+    private File getCoverFile(@PathVariable long albumId) throws IOException {
         String coverFileName = format("covers/%d", albumId);
-        return new File(coverFileName);
+        File file = new File(coverFileName);
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
+        int read;
+        byte[] bytes = new byte[1024];
+
+        while ((read = blobStore.get(coverFileName).get().inputStream.read(bytes)) != -1) {
+            fileOutputStream.write(bytes, 0, read);
+        }
+        return file;
+//        return new File(coverFileName);
     }
 
-    private Path getExistingCoverPath(@PathVariable long albumId) throws URISyntaxException {
+    private Path getExistingCoverPath(@PathVariable long albumId) throws URISyntaxException, IOException {
         File coverFile = getCoverFile(albumId);
         Path coverFilePath;
 
